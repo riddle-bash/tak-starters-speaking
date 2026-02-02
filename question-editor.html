@@ -584,55 +584,55 @@
             // Set background image
             const canvas = document.getElementById('canvas');
             const bgImage = document.createElement('img');
-            bgImage.src = '/mnt/user-data/uploads/d91058e3986c4966ae15db9b840f0ab3.jpeg';
+            bgImage.src = 'https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_1.jpg';
             bgImage.className = 'background-image';
             bgImage.onload = function() {
                 canvas.innerHTML = '';
                 canvas.appendChild(bgImage);
                 canvas.classList.add('has-image');
-                
                 // Add sample question groups and options
                 addSampleData();
             };
         }
 
         function addSampleData() {
-            // Create first question group
+            // Create first question group with options array
             const group1 = {
                 id: groupIdCounter++,
-                questionId: 'Q1'
+                questionId: 'Q1',
+                options: []
             };
             questionGroups.push(group1);
 
-            // Add duck options to first group
+            // Add options to first group
             addOptionProgrammatically({
-                name: 'Duck',
-                imagePath: '/mnt/user-data/uploads/Subject_2.png',
-                x: 45,
-                y: 60,
-                width: 80,
-                height: 80,
+                name: 'Option 1',
+                imagePath: 'https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_2.png',
+                x: 60,
+                y: 65,
+                width: 115,
+                height: 115,
                 groupId: group1.id
             });
 
             addOptionProgrammatically({
-                name: 'Duck 2',
-                imagePath: '/mnt/user-data/uploads/Subject_3.png',
-                x: 75,
-                y: 55,
-                width: 80,
-                height: 80,
+                name: 'Option 2',
+                imagePath: 'https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_3.png',
+                x: 82,
+                y: 67,
+                width: 90,
+                height: 90,
                 groupId: group1.id
             });
 
-            // Add horse as noise option (no group)
+            // Add non-question group option (noise)
             addOptionProgrammatically({
-                name: 'Horse',
-                imagePath: '/mnt/user-data/uploads/Subject.png',
-                x: 70,
-                y: 20,
-                width: 100,
-                height: 100,
+                name: 'Noise Option',
+                imagePath: 'https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_4.png',
+                x: 80,
+                y: 25,
+                width: 170,
+                height: 170,
                 groupId: null
             });
 
@@ -698,10 +698,16 @@
                 y: config.y,
                 width: config.width,
                 height: config.height,
-                groupId: config.groupId || null
+                groupId: typeof config.groupId !== 'undefined' ? config.groupId : null
             };
-            
             options.push(option);
+            // Also add to group.options if groupId is set
+            if (option.groupId !== null) {
+                const group = questionGroups.find(g => g.id === option.groupId);
+                if (group && Array.isArray(group.options)) {
+                    group.options.push(option);
+                }
+            }
         }
 
         function handleBackgroundUpload(event) {
