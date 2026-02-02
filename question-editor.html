@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Editor - Drag Drop On Picture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 95%;
+            max-width: 1400px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #666;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 24px;
+            height: 100%;
+        }
+
+        .canvas-section {
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .canvas-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .canvas-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .upload-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .upload-btn:hover {
+            background: #45a049;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: white;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            flex: 1;
+            min-height: 500px;
+        }
+
+        .canvas-container.has-image {
+            border-style: solid;
+        }
+
+        .background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .draggable-option {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+
+        .draggable-option:hover {
+            transform: scale(1.05);
+        }
+
+        .draggable-option.dragging {
+            opacity: 0.7;
+            z-index: 100;
+        }
+
+        .option-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .option-label {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .delete-option {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #f44336;
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .draggable-option:hover .delete-option {
+            display: flex;
+        }
+
+        .options-panel {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e5e5;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .add-option-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .add-option-btn:hover {
+            background: #1976D2;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .question-group {
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fafafa;
+        }
+
+        .question-group.noise {
+            border-color: #ff9800;
+            background: #fff8e1;
+        }
+
+        .group-header {
+            background: #f5f5f5;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .question-group.noise .group-header {
+            background: #ffe0b2;
+        }
+
+        .group-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .group-header-left label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .question-id-input {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 80px;
+            background: white;
+        }
+
+        .group-header-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .show-question-btn {
+            background: #673AB7;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .show-question-btn:hover {
+            background: #5E35B1;
+        }
+
+        .add-group-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .add-group-btn:hover {
+            background: #45a049;
+        }
+
+        .delete-group-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .delete-group-btn:hover {
+            background: #d32f2f;
+        }
+
+        .group-options {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .noise-label {
+            font-size: 12px;
+            color: #f57c00;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .controls-row button {
+            flex: 1;
+        }
+
+        .option-item {
+            background: #f9f9f9;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .option-preview {
+            width: 60px;
+            height: 60px;
+            border-radius: 4px;
+            background: white;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .option-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .option-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .option-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .option-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: 1px solid #ddd;
+            padding: 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: #f0f0f0;
+            border-color: #999;
+        }
+
+        .icon-btn.delete:hover {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #f44336;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+        }
+
+        .question-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-family: inherit;
+        }
+
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Tạo câu hỏi mới | Type: Drag Drop On Picture</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            
+            <div class="modal-body">
+                <input type="text" class="question-input" placeholder="Nhập tên câu hỏi..." value="">
+                
+                <div class="content-grid">
+                    <div class="canvas-section">
+                        <div class="canvas-header">
+                            <h3>Background Image</h3>
+                            <button class="upload-btn" onclick="document.getElementById('bgUpload').click()">
+                                📤 Upload/Change Image
+                            </button>
+                            <input type="file" id="bgUpload" accept="image/*" onchange="handleBackgroundUpload(event)">
+                        </div>
+                        
+                        <div class="canvas-container" id="canvas">
+                            <div class="empty-state">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <p>Click "Upload/Change Image" to add a background</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="options-panel">
+                        <div class="panel-header">
+                            <h3>Questions & Options</h3>
+                            <button class="add-option-btn" onclick="addOption()">+ Add Option</button>
+                        </div>
+                        
+                        <div class="controls-row">
+                            <button class="add-group-btn" onclick="addQuestionGroup()">+ Add Question Group</button>
+                        </div>
+                        
+                        <div class="options-list" id="optionsList">
+                            <!-- Question groups and options will be added here dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveQuestion()">Save & Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let options = [];
+        let questionGroups = [];
+        let optionIdCounter = 0;
+        let groupIdCounter = 0;
+        let draggedElement = null;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        // Initialize with sample data using uploaded images
+        function initializeSampleData() {
+            // Set background image
+            const canvas = document.getElementById('canvas');
+            const bgImage = document.createElement('img');
+            bgImage.src = '/mnt/user-data/uploads/d91058e3986c4966ae15db9b840f0ab3.jpeg';
+            bgImage.className = 'background-image';
+            bgImage.onload = function() {
+                canvas.innerHTML = '';
+                canvas.appendChild(bgImage);
+                canvas.classList.add('has-image');
+                
+                // Add sample question groups and options
+                addSampleData();
+            };
+        }
+
+        function addSampleData() {
+            // Create first question group
+            const group1 = {
+                id: groupIdCounter++,
+                questionId: 'Q1'
+            };
+            questionGroups.push(group1);
+
+            // Add duck options to first group
+            addOptionProgrammatically({
+                name: 'Duck',
+                imagePath: '/mnt/user-data/uploads/Subject_2.png',
+                x: 45,
+                y: 60,
+                width: 80,
+                height: 80,
+                groupId: group1.id
+            });
+
+            addOptionProgrammatically({
+                name: 'Duck 2',
+                imagePath: '/mnt/user-data/uploads/Subject_3.png',
+                x: 75,
+                y: 55,
+                width: 80,
+                height: 80,
+                groupId: group1.id
+            });
+
+            // Add horse as noise option (no group)
+            addOptionProgrammatically({
+                name: 'Horse',
+                imagePath: '/mnt/user-data/uploads/Subject.png',
+                x: 70,
+                y: 20,
+                width: 100,
+                height: 100,
+                groupId: null
+            });
+
+            renderOptions();
+        }
+
+        function addQuestionGroup() {
+            const group = {
+                id: groupIdCounter++,
+                questionId: `Q${groupIdCounter}`
+            };
+            questionGroups.push(group);
+            renderOptions();
+        }
+
+        function deleteQuestionGroup(groupId) {
+            if (!confirm('Delete this question group? All options will become noise options.')) {
+                return;
+            }
+            
+            // Move all options in this group to noise
+            options.forEach(opt => {
+                if (opt.groupId === groupId) {
+                    opt.groupId = null;
+                }
+            });
+            
+            questionGroups = questionGroups.filter(g => g.id !== groupId);
+            renderOptions();
+        }
+
+        function updateQuestionId(groupId, newQuestionId) {
+            const group = questionGroups.find(g => g.id === groupId);
+            if (group) {
+                group.questionId = newQuestionId;
+            }
+        }
+
+        function showQuestion(groupId) {
+            const group = questionGroups.find(g => g.id === groupId);
+            if (!group) return;
+
+            const groupOptions = options.filter(opt => opt.groupId === groupId);
+            const optionNames = groupOptions.map(opt => opt.name).join(', ');
+            
+            alert(`Question ID: ${group.questionId}\nCorrect Options: ${optionNames || 'None'}`);
+        }
+
+        function moveOptionToGroup(optionId, groupId) {
+            const option = options.find(o => o.id === optionId);
+            if (option) {
+                option.groupId = groupId;
+                renderOptions();
+            }
+        }
+
+        function addOptionProgrammatically(config) {
+            const option = {
+                id: optionIdCounter++,
+                name: config.name,
+                imagePath: config.imagePath,
+                x: config.x,
+                y: config.y,
+                width: config.width,
+                height: config.height,
+                groupId: config.groupId || null
+            };
+            
+            options.push(option);
+        }
+
+        function handleBackgroundUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const canvas = document.getElementById('canvas');
+                canvas.innerHTML = '';
+                
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'background-image';
+                canvas.appendChild(img);
+                canvas.classList.add('has-image');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function addOption() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const option = {
+                        id: optionIdCounter++,
+                        name: `Option ${options.length + 1}`,
+                        imagePath: event.target.result,
+                        x: 10 + (options.length * 5),
+                        y: 10 + (options.length * 5),
+                        width: 80,
+                        height: 80,
+                        groupId: null // Start as noise option
+                    };
+                    
+                    options.push(option);
+                    renderOptions();
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        function renderOptions() {
+            const list = document.getElementById('optionsList');
+            let html = '';
+
+            // Render question groups
+            questionGroups.forEach(group => {
+                const groupOptions = options.filter(opt => opt.groupId === group.id);
+                
+                html += `
+                    <div class="question-group">
+                        <div class="group-header">
+                            <div class="group-header-left">
+                                <label>Question ID:</label>
+                                <input type="text" class="question-id-input" value="${group.questionId}" 
+                                       onchange="updateQuestionId(${group.id}, this.value)">
+                            </div>
+                            <div class="group-header-right">
+                                <button class="show-question-btn" onclick="showQuestion(${group.id})">
+                                    👁️ Show
+                                </button>
+                                <button class="delete-group-btn" onclick="deleteQuestionGroup(${group.id})">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                        <div class="group-options">
+                            ${groupOptions.length === 0 ? '<p style="color: #999; font-size: 12px; text-align: center; padding: 8px;">No options assigned</p>' : ''}
+                            ${groupOptions.map(opt => renderOptionItem(opt, group.id)).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render noise options
+            const noiseOptions = options.filter(opt => opt.groupId === null);
+            if (noiseOptions.length > 0) {
+                html += `
+                    <div class="question-group noise">
+                        <div class="group-header">
+                            <div class="group-header-left">
+                                <span class="noise-label">⚠️ Noise Options (No Question)</span>
+                            </div>
+                        </div>
+                        <div class="group-options">
+                            ${noiseOptions.map(opt => renderOptionItem(opt, null)).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            list.innerHTML = html;
+
+            // Render draggable options on canvas
+            renderCanvasOptions();
+        }
+
+        function renderOptionItem(opt, groupId) {
+            const groupOptions = questionGroups.map(g => 
+                `<option value="${g.id}" ${opt.groupId === g.id ? 'selected' : ''}>Move to ${g.questionId}</option>`
+            ).join('');
+
+            return `
+                <div class="option-item">
+                    <div class="option-preview">
+                        <img src="${opt.imagePath}" alt="${opt.name}">
+                    </div>
+                    <div class="option-details">
+                        <input type="text" class="option-input" value="${opt.name}" 
+                               onchange="updateOptionName(${opt.id}, this.value)">
+                        <div style="display: flex; gap: 8px; font-size: 12px; color: #666;">
+                            <span>X: ${Math.round(opt.x)}%</span>
+                            <span>Y: ${Math.round(opt.y)}%</span>
+                            <span>Size: ${opt.width}px</span>
+                        </div>
+                        ${questionGroups.length > 0 ? `
+                            <select class="option-input" onchange="moveOptionToGroup(${opt.id}, parseInt(this.value))">
+                                <option value="">Noise Option</option>
+                                ${groupOptions}
+                            </select>
+                        ` : ''}
+                    </div>
+                    <div class="option-actions">
+                        <button class="icon-btn" onclick="changeOptionImage(${opt.id})" title="Change image">🖼️</button>
+                        <button class="icon-btn delete" onclick="deleteOption(${opt.id})" title="Delete">🗑️</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCanvasOptions() {
+            const canvas = document.getElementById('canvas');
+            const existingOptions = canvas.querySelectorAll('.draggable-option');
+            existingOptions.forEach(el => el.remove());
+
+            options.forEach(opt => {
+                const div = document.createElement('div');
+                div.className = 'draggable-option';
+                div.style.left = opt.x + '%';
+                div.style.top = opt.y + '%';
+                div.style.width = opt.width + 'px';
+                div.style.height = opt.height + 'px';
+                div.dataset.optionId = opt.id;
+
+                // Add visual indicator for noise vs question options
+                const borderColor = opt.groupId === null ? '#ff9800' : '#4CAF50';
+                div.style.border = `2px solid ${borderColor}`;
+                div.style.borderRadius = '4px';
+
+                div.innerHTML = `
+                    <div class="option-label">${opt.name}</div>
+                    <img src="${opt.imagePath}" class="option-image" alt="${opt.name}">
+                    <button class="delete-option" onclick="deleteOption(${opt.id})">×</button>
+                `;
+
+                div.addEventListener('mousedown', startDrag);
+                canvas.appendChild(div);
+            });
+        }
+
+        function startDrag(e) {
+            if (e.target.classList.contains('delete-option')) return;
+            
+            draggedElement = e.currentTarget;
+            draggedElement.classList.add('dragging');
+
+            const rect = draggedElement.getBoundingClientRect();
+            const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+            
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function drag(e) {
+            if (!draggedElement) return;
+
+            const canvas = document.getElementById('canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+
+            let x = e.clientX - canvasRect.left - offsetX;
+            let y = e.clientY - canvasRect.top - offsetY;
+
+            // Convert to percentage
+            const xPercent = (x / canvasRect.width) * 100;
+            const yPercent = (y / canvasRect.height) * 100;
+
+            // Clamp values
+            const clampedX = Math.max(0, Math.min(95, xPercent));
+            const clampedY = Math.max(0, Math.min(95, yPercent));
+
+            draggedElement.style.left = clampedX + '%';
+            draggedElement.style.top = clampedY + '%';
+
+            // Update option data
+            const optionId = parseInt(draggedElement.dataset.optionId);
+            const option = options.find(o => o.id === optionId);
+            if (option) {
+                option.x = clampedX;
+                option.y = clampedY;
+            }
+        }
+
+        function stopDrag() {
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+                draggedElement = null;
+            }
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+            
+            // Re-render to update position display
+            renderOptions();
+        }
+
+        function updateOptionName(id, newName) {
+            const option = options.find(o => o.id === id);
+            if (option) {
+                option.name = newName;
+                renderOptions();
+            }
+        }
+
+        function changeOptionImage(id) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const option = options.find(o => o.id === id);
+                    if (option) {
+                        option.imagePath = event.target.result;
+                        renderOptions();
+                    }
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        function deleteOption(id) {
+            options = options.filter(o => o.id !== id);
+            renderOptions();
+        }
+
+        function closeModal() {
+            if (confirm('Are you sure you want to close? Any unsaved changes will be lost.')) {
+                window.close();
+            }
+        }
+
+        function saveQuestion() {
+            const questionName = document.querySelector('.question-input').value;
+            
+            if (!questionName.trim()) {
+                alert('Please enter a question name');
+                return;
+            }
+
+            const canvas = document.getElementById('canvas');
+            if (!canvas.querySelector('.background-image')) {
+                alert('Please upload a background image');
+                return;
+            }
+
+            if (options.length === 0) {
+                alert('Please add at least one option');
+                return;
+            }
+
+            console.log('Saving question:', {
+                name: questionName,
+                groups: questionGroups,
+                options: options
+            });
+
+            alert('Question saved successfully!');
+        }
+
+        // Initialize with sample data on load
+        window.addEventListener('load', initializeSampleData);
+    </script>
+</body>
+</html>
