@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Editor - Placing in Picture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 95%;
+            max-width: 1400px;
+            max-height: 100vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #666;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 500px;
+            gap: 24px;
+            height: 100%;
+        }
+
+        .canvas-section {
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .canvas-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .canvas-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .upload-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .upload-btn:hover {
+            background: #45a049;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: white;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            flex: 1;
+            min-height: 500px;
+        }
+
+        .canvas-container.has-image {
+            border-style: solid;
+        }
+
+        .background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .drop-zone {
+            position: absolute;
+            border: 3px dashed #3b82f6;
+            border-radius: 8px;
+            background: rgba(59, 130, 246, 0.15);
+            cursor: move;
+            user-select: none;
+            transition: transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drop-zone:hover {
+            transform: scale(1.02);
+            background: rgba(59, 130, 246, 0.25);
+        }
+
+        .drop-zone.dragging {
+            opacity: 0.7;
+            z-index: 100;
+        }
+
+        .drop-zone.correct-answer {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .drop-zone.correct-answer:hover {
+            background: rgba(16, 185, 129, 0.25);
+        }
+
+        .zone-label {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .resize-handle {
+            position: absolute;
+            bottom: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: nwse-resize;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .delete-zone {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #f44336;
+            color: white;
+            border: 2px solid white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .drop-zone:hover .delete-zone {
+            display: flex;
+        }
+
+        .options-panel {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e5e5;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .add-option-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .add-option-btn:hover {
+            background: #1976D2;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .question-group {
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .question-group.noise {
+            border-color: #ff9800;
+            background: #fff8e1;
+        }
+
+        .group-header {
+            background: #f5f5f5;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .question-group.noise .group-header {
+            background: #ffe0b2;
+        }
+
+        .group-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .group-header-left label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .question-id-input {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 80px;
+            background: white;
+        }
+
+        .group-header-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .show-question-btn {
+            background: #673AB7;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .show-question-btn:hover {
+            background: #5E35B1;
+        }
+
+        .delete-group-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .delete-group-btn:hover {
+            background: #d32f2f;
+        }
+
+        .group-content {
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .group-content.noise {
+            grid-template-columns: 1fr;
+        }
+
+        .group-section {
+            background: white;
+            border-radius: 6px;
+            padding: 10px;
+            border: 1px solid #e5e5e5;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .item-row {
+            background: #f9f9f9;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .noise-label {
+            font-size: 12px;
+            color: #f57c00;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .controls-row button {
+            flex: 1;
+        }
+
+        .add-group-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .add-group-btn:hover {
+            background: #45a049;
+        }
+
+        .add-zone-btn, .add-item-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+            width: 100%;
+        }
+
+        .add-zone-btn:hover, .add-item-btn:hover {
+            background: #1976D2;
+        }
+
+        .option-preview {
+            width: 50px;
+            height: 50px;
+            border-radius: 4px;
+            background: white;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .option-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .item-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .item-info.inline {
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .item-info.inline .item-input {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .item-info.inline .group-select {
+            flex-shrink: 0;
+            width: auto;
+            min-width: 120px;
+        }
+
+        .item-name {
+            font-weight: 600;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .item-details {
+            display: flex;
+            gap: 6px;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .item-input {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: 1px solid #ddd;
+            padding: 4px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #666;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: #f0f0f0;
+            border-color: #999;
+        }
+
+        .icon-btn.delete:hover {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #f44336;
+        }
+
+        .group-select {
+            padding: 4px 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 11px;
+            background: white;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+        }
+
+        .question-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-family: inherit;
+        }
+
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .hint-text {
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        .correct-badge {
+            background: #10b981;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Tạo câu hỏi mới | Type: Placing in Picture</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            
+            <div class="modal-body">
+                <input type="text" class="question-input" placeholder="Nhập tên câu hỏi..." value="">
+                
+                <div class="content-grid">
+                    <div class="canvas-section">
+                        <div class="canvas-header">
+                            <h3>Background Image</h3>
+                            <button class="upload-btn" onclick="document.getElementById('bgUpload').click()">
+                                📤 Upload/Change Image
+                            </button>
+                            <input type="file" id="bgUpload" accept="image/*" onchange="handleBackgroundUpload(event)">
+                        </div>
+                        
+                        <div class="canvas-container" id="canvas">
+                            <div class="empty-state">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <p>Click "Upload/Change Image" to add a background</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="options-panel">
+                        <div class="panel-header">
+                            <h3>Questions & Options</h3>
+                            <div>
+                              <button class="add-option-btn" onclick="addOption()">+ Item</button>
+                              <button class="add-option-btn" onclick="addDropZone()">+ Zone</button>
+                            </div>
+                        </div>
+                        
+                        <div class="controls-row">
+                            <button class="add-group-btn" onclick="addQuestionGroup()">+ Add Question Group</button>
+                        </div>
+                        
+                        <div class="options-list" id="optionsList">
+                            <!-- Question groups will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveQuestion()">Save & Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dropZones = [];
+        let options = [];
+        let questionGroups = [];
+        let zoneIdCounter = 0;
+        let optionIdCounter = 0;
+        let groupIdCounter = 0;
+        let draggedElement = null;
+        let resizingElement = null;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        // Initialize with sample data
+        function initializeSampleData() {
+            const canvas = document.getElementById('canvas');
+            const bgImage = document.createElement('img');
+            bgImage.src = 'https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_1.jpg';
+            bgImage.className = 'background-image';
+            bgImage.onload = function() {
+                canvas.innerHTML = '';
+                canvas.appendChild(bgImage);
+                canvas.classList.add('has-image');
+                addSampleData();
+            };
+        }
+
+        function addSampleData() {
+            // Create first question group
+            const group1 = {
+                id: groupIdCounter++,
+                questionId: 'Q1'
+            };
+            questionGroups.push(group1);
+
+            // Add drop zone and item for Q1
+            addDropZoneProgrammatically({
+                name: 'Zone 1',
+                x: 72,
+                y: 70,
+                width: 10,
+                height: 10,
+                groupId: group1.id
+            });
+
+            addOptionProgrammatically({
+                name: 'Item 6',
+                imagePath: 'https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_Item%20(7).png',
+                groupId: group1.id
+            });
+
+            // Add noise zones
+            addDropZoneProgrammatically({
+                name: 'Noise Zone 1',
+                x: 10,
+                y: 20,
+                width: 10,
+                height: 10,
+                groupId: null
+            });
+
+            addDropZoneProgrammatically({
+                name: 'Noise Zone 2',
+                x: 45,
+                y: 70,
+                width: 10,
+                height: 10,
+                groupId: null
+            });
+
+            addDropZoneProgrammatically({
+                name: 'Noise Zone 3',
+                x: 20,
+                y: 70,
+                width: 10,
+                height: 10,
+                groupId: null
+            });
+
+            // Add noise items
+            for (let i = 1; i <= 5; i++) {
+                addOptionProgrammatically({
+                    name: `Noise Item ${i}`,
+                    imagePath: `https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_Item%20(${i}).png`,
+                    groupId: null
+                });
+            }
+
+            renderAll();
+        }
+
+        function addQuestionGroup() {
+            const group = {
+                id: groupIdCounter++,
+                questionId: `Q${groupIdCounter}`
+            };
+            questionGroups.push(group);
+            renderAll();
+        }
+
+        function deleteQuestionGroup(groupId) {
+            if (!confirm('Delete this question group? All items will become noise.')) {
+                return;
+            }
+            
+            // Move all zones and options in this group to noise
+            dropZones.forEach(zone => {
+                if (zone.groupId === groupId) {
+                    zone.groupId = null;
+                }
+            });
+            
+            options.forEach(opt => {
+                if (opt.groupId === groupId) {
+                    opt.groupId = null;
+                }
+            });
+            
+            questionGroups = questionGroups.filter(g => g.id !== groupId);
+            renderAll();
+        }
+
+        function updateQuestionId(groupId, newQuestionId) {
+            const group = questionGroups.find(g => g.id === groupId);
+            if (group) {
+                group.questionId = newQuestionId;
+            }
+        }
+
+        function showQuestion(groupId) {
+            const group = questionGroups.find(g => g.id === groupId);
+            if (!group) return;
+
+            const groupZones = dropZones.filter(z => z.groupId === groupId);
+            const groupOptions = options.filter(opt => opt.groupId === groupId);
+            
+            const zoneNames = groupZones.map(z => z.name).join(', ');
+            const optionNames = groupOptions.map(opt => opt.name).join(', ');
+            
+            alert(`Question ID: ${group.questionId}\nDrop Zones: ${zoneNames || 'None'}\nDrag Items: ${optionNames || 'None'}`);
+        }
+
+        function moveZoneToGroup(zoneId, groupId) {
+            const zone = dropZones.find(z => z.id === zoneId);
+            if (zone) {
+                zone.groupId = groupId;
+                renderAll();
+            }
+        }
+
+        function moveOptionToGroup(optionId, groupId) {
+            const option = options.find(o => o.id === optionId);
+            if (option) {
+                option.groupId = groupId;
+                renderAll();
+            }
+        }
+
+        function addDropZoneProgrammatically(config) {
+            const zone = {
+                id: zoneIdCounter++,
+                name: config.name,
+                x: config.x,
+                y: config.y,
+                width: config.width,
+                height: config.height,
+                groupId: typeof config.groupId !== 'undefined' ? config.groupId : null
+            };
+            dropZones.push(zone);
+        }
+
+        function addOptionProgrammatically(config) {
+            const option = {
+                id: optionIdCounter++,
+                name: config.name,
+                imagePath: config.imagePath,
+                groupId: typeof config.groupId !== 'undefined' ? config.groupId : null
+            };
+            options.push(option);
+        }
+
+        function handleBackgroundUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const canvas = document.getElementById('canvas');
+                canvas.innerHTML = '';
+                
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'background-image';
+                canvas.appendChild(img);
+                canvas.classList.add('has-image');
+                
+                renderCanvasItems();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function addDropZone(groupId = null) {
+            const zone = {
+                id: zoneIdCounter++,
+                name: `Zone ${dropZones.length + 1}`,
+                x: 10 + (dropZones.length * 5) % 50,
+                y: 10 + (dropZones.length * 5) % 50,
+                width: 10,
+                height: 10,
+                groupId: groupId
+            };
+            
+            dropZones.push(zone);
+            renderAll();
+        }
+
+        function addOption(groupId = null) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const option = {
+                        id: optionIdCounter++,
+                        name: `Item ${options.length + 1}`,
+                        imagePath: event.target.result,
+                        groupId: groupId
+                    };
+                    
+                    options.push(option);
+                    renderAll();
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        function renderAll() {
+            renderGroupsList();
+            renderCanvasItems();
+        }
+
+        function renderGroupsList() {
+            const list = document.getElementById('optionsList');
+            let html = '';
+
+            // Render question groups
+            questionGroups.forEach(group => {
+                const groupZones = dropZones.filter(z => z.groupId === group.id);
+                const groupOptions = options.filter(opt => opt.groupId === group.id);
+                
+                html += `
+                    <div class="question-group">
+                        <div class="group-header">
+                            <div class="group-header-left">
+                                <label>Question ID:</label>
+                                <input type="text" class="question-id-input" value="${group.questionId}" 
+                                       onchange="updateQuestionId(${group.id}, this.value)">
+                            </div>
+                            <div class="group-header-right">
+                                <button class="show-question-btn" onclick="showQuestion(${group.id})">
+                                    👁️ Show
+                                </button>
+                                <button class="delete-group-btn" onclick="deleteQuestionGroup(${group.id})">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                        <div class="group-content">
+                            <div class="group-section">
+                                <div class="section-title">Drop Zones (${groupZones.length})</div>
+                                ${groupZones.map(zone => renderZoneItem(zone, group.id)).join('')}
+                            </div>
+                            <div class="group-section">
+                                <div class="section-title">Drag Items (${groupOptions.length})</div>
+                                ${groupOptions.map(opt => renderOptionItem(opt, group.id)).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render noise items
+            const noiseZones = dropZones.filter(z => z.groupId === null);
+            const noiseOptions = options.filter(opt => opt.groupId === null);
+            
+            if (noiseZones.length > 0 || noiseOptions.length > 0) {
+                html += `
+                    <div class="question-group noise">
+                        <div class="group-header">
+                            <div class="group-header-left">
+                                <span class="noise-label">⚠️ Noise Items (No Question)</span>
+                            </div>
+                        </div>
+                        <div class="group-content noise">
+                            ${noiseZones.length > 0 ? `
+                                <div class="group-section">
+                                    <div class="section-title">Noise Drop Zones (${noiseZones.length})</div>
+                                    ${noiseZones.map(zone => renderZoneItem(zone, null)).join('')}
+                                </div>
+                            ` : ''}
+                            ${noiseOptions.length > 0 ? `
+                                <div class="group-section">
+                                    <div class="section-title">Noise Drag Items (${noiseOptions.length})</div>
+                                    ${noiseOptions.map(opt => renderOptionItem(opt, null)).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            list.innerHTML = html;
+        }
+
+        function renderZoneItem(zone, currentGroupId) {
+            const groupOptions = questionGroups.map(g => 
+                `<option value="${g.id}" ${zone.groupId === g.id ? 'selected' : ''}>Move to ${g.questionId}</option>`
+            ).join('');
+            
+            const isNoise = currentGroupId === null;
+            const infoClass = isNoise && questionGroups.length > 0 ? 'item-info inline' : 'item-info';
+
+            return `
+                <div class="item-row">
+                    <div class="${infoClass}">
+                        <input type="text" class="item-input" value="${zone.name}" 
+                               onchange="updateZoneName(${zone.id}, this.value)">
+                        ${!isNoise ? `
+                            <div class="item-details">
+                                <span>X: ${Math.round(zone.x)}%</span>
+                                <span>Y: ${Math.round(zone.y)}%</span>
+                                <span>W: ${Math.round(zone.width)}%</span>
+                                <span>H: ${Math.round(zone.height)}%</span>
+                            </div>
+                        ` : ''}
+                        ${questionGroups.length > 0 ? `
+                            <select class="group-select" onchange="moveZoneToGroup(${zone.id}, this.value === '' ? null : parseInt(this.value))">
+                                <option value="">Noise Zone</option>
+                                ${groupOptions}
+                            </select>
+                        ` : ''}
+                    </div>
+                    ${isNoise ? `
+                        <div style="font-size: 10px; color: #666; white-space: nowrap;">
+                            X:${Math.round(zone.x)}% Y:${Math.round(zone.y)}%<br>W:${Math.round(zone.width)}% H:${Math.round(zone.height)}%
+                        </div>
+                    ` : ''}
+                    <div class="item-actions">
+                        <button class="icon-btn delete" onclick="deleteZone(${zone.id})" title="Delete">🗑️</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOptionItem(opt, currentGroupId) {
+            const groupOptions = questionGroups.map(g => 
+                `<option value="${g.id}" ${opt.groupId === g.id ? 'selected' : ''}>Move to ${g.questionId}</option>`
+            ).join('');
+            
+            const isNoise = currentGroupId === null;
+            const infoClass = isNoise && questionGroups.length > 0 ? 'item-info inline' : 'item-info';
+
+            return `
+                <div class="item-row">
+                    <div class="option-preview">
+                        <img src="${opt.imagePath}" alt="${opt.name}">
+                    </div>
+                    <div class="${infoClass}">
+                        <input type="text" class="item-input" value="${opt.name}" 
+                               onchange="updateOptionName(${opt.id}, this.value)">
+                        ${questionGroups.length > 0 ? `
+                            <select class="group-select" onchange="moveOptionToGroup(${opt.id}, this.value === '' ? null : parseInt(this.value))">
+                                <option value="">Noise Item</option>
+                                ${groupOptions}
+                            </select>
+                        ` : ''}
+                    </div>
+                    <div class="item-actions">
+                        <button class="icon-btn" onclick="changeOptionImage(${opt.id})" title="Change image">🖼️</button>
+                        <button class="icon-btn delete" onclick="deleteOption(${opt.id})" title="Delete">🗑️</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCanvasItems() {
+            const canvas = document.getElementById('canvas');
+            const existingZones = canvas.querySelectorAll('.drop-zone');
+            existingZones.forEach(el => el.remove());
+
+            if (!canvas.querySelector('.background-image')) return;
+
+            dropZones.forEach(zone => {
+                const div = document.createElement('div');
+                div.className = 'drop-zone';
+                
+                // Color code based on group membership
+                const borderColor = zone.groupId === null ? '#ff9800' : '#4CAF50';
+                const bgColor = zone.groupId === null ? 'rgba(255, 152, 0, 0.15)' : 'rgba(76, 175, 80, 0.15)';
+                
+                div.style.left = zone.x + '%';
+                div.style.top = zone.y + '%';
+                div.style.width = zone.width + '%';
+                div.style.height = zone.height + '%';
+                div.style.borderColor = borderColor;
+                div.style.background = bgColor;
+                div.dataset.zoneId = zone.id;
+
+                div.innerHTML = `
+                    <div class="zone-label">${zone.name}</div>
+                    <div class="resize-handle"></div>
+                    <button class="delete-zone" onclick="deleteZone(${zone.id})">×</button>
+                `;
+
+                div.addEventListener('mousedown', startDragZone);
+                const resizeHandle = div.querySelector('.resize-handle');
+                resizeHandle.addEventListener('mousedown', startResize);
+                
+                canvas.appendChild(div);
+            });
+        }
+
+        function renderOptionsList() {
+            const list = document.getElementById('optionsList');
+            let html = '';
+
+            options.forEach(opt => {
+                const isCorrect = opt.id === correctAnswerOptionId;
+                html += `
+                    <div class="option-item ${isCorrect ? 'correct-answer' : ''}">
+                        <div class="item-header">
+                            <span class="item-name">${opt.name} ${isCorrect ? '<span class="correct-badge">✓ Correct Answer</span>' : ''}</span>
+                            <div class="item-actions">
+                                ${!isCorrect ? `<button class="icon-btn" onclick="setCorrectOption(${opt.id})" title="Set as correct answer">✓</button>` : ''}
+                                <button class="icon-btn" onclick="changeOptionImage(${opt.id})" title="Change image">🖼️</button>
+                                <button class="icon-btn delete" onclick="deleteOption(${opt.id})" title="Delete">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="option-content">
+                            <div class="option-preview">
+                                <img src="${opt.imagePath}" alt="${opt.name}">
+                            </div>
+                            <div class="option-details">
+                                <input type="text" class="item-input" value="${opt.name}" 
+                                       onchange="updateOptionName(${opt.id}, this.value)">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html || '<p style="color: #999; font-size: 12px; text-align: center; padding: 16px;">No options yet</p>';
+        }
+
+        function renderCanvasZones() {
+            const canvas = document.getElementById('canvas');
+            const existingZones = canvas.querySelectorAll('.drop-zone');
+            existingZones.forEach(el => el.remove());
+
+            if (!canvas.querySelector('.background-image')) return;
+
+            dropZones.forEach(zone => {
+                const div = document.createElement('div');
+                div.className = 'drop-zone';
+                if (zone.id === correctAnswerZoneId) {
+                    div.classList.add('correct-answer');
+                }
+                div.style.left = zone.x + '%';
+                div.style.top = zone.y + '%';
+                div.style.width = zone.width + '%';
+                div.style.height = zone.height + '%';
+                div.dataset.zoneId = zone.id;
+
+                div.innerHTML = `
+                    <div class="zone-label">${zone.name}</div>
+                    <div class="resize-handle"></div>
+                    <button class="delete-zone" onclick="deleteZone(${zone.id})">×</button>
+                `;
+
+                div.addEventListener('mousedown', startDragZone);
+                const resizeHandle = div.querySelector('.resize-handle');
+                resizeHandle.addEventListener('mousedown', startResize);
+                
+                canvas.appendChild(div);
+            });
+        }
+
+        function startDragZone(e) {
+            if (e.target.classList.contains('delete-zone') || 
+                e.target.classList.contains('resize-handle')) return;
+            
+            draggedElement = e.currentTarget;
+            draggedElement.classList.add('dragging');
+
+            const rect = draggedElement.getBoundingClientRect();
+            const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+            
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+
+            document.addEventListener('mousemove', dragZone);
+            document.addEventListener('mouseup', stopDragZone);
+            e.preventDefault();
+        }
+
+        function dragZone(e) {
+            if (!draggedElement) return;
+
+            const canvas = document.getElementById('canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+
+            let x = e.clientX - canvasRect.left - offsetX;
+            let y = e.clientY - canvasRect.top - offsetY;
+
+            const xPercent = (x / canvasRect.width) * 100;
+            const yPercent = (y / canvasRect.height) * 100;
+
+            const zoneWidth = parseFloat(draggedElement.style.width);
+            const zoneHeight = parseFloat(draggedElement.style.height);
+
+            const clampedX = Math.max(0, Math.min(100 - zoneWidth, xPercent));
+            const clampedY = Math.max(0, Math.min(100 - zoneHeight, yPercent));
+
+            draggedElement.style.left = clampedX + '%';
+            draggedElement.style.top = clampedY + '%';
+
+            const zoneId = parseInt(draggedElement.dataset.zoneId);
+            const zone = dropZones.find(z => z.id === zoneId);
+            if (zone) {
+                zone.x = clampedX;
+                zone.y = clampedY;
+            }
+        }
+
+        function stopDragZone() {
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+                draggedElement = null;
+            }
+            document.removeEventListener('mousemove', dragZone);
+            document.removeEventListener('mouseup', stopDragZone);
+            renderGroupsList();
+        }
+
+        function startResize(e) {
+            resizingElement = e.target.parentElement;
+            document.addEventListener('mousemove', resizeZone);
+            document.addEventListener('mouseup', stopResize);
+            e.stopPropagation();
+            e.preventDefault();
+        }
+
+        function resizeZone(e) {
+            if (!resizingElement) return;
+
+            const canvas = document.getElementById('canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            const zoneRect = resizingElement.getBoundingClientRect();
+
+            const zoneLeft = parseFloat(resizingElement.style.left);
+            const zoneTop = parseFloat(resizingElement.style.top);
+
+            const newWidth = ((e.clientX - zoneRect.left) / canvasRect.width) * 100;
+            const newHeight = ((e.clientY - zoneRect.top) / canvasRect.height) * 100;
+
+            const clampedWidth = Math.max(5, Math.min(100 - zoneLeft, newWidth));
+            const clampedHeight = Math.max(5, Math.min(100 - zoneTop, newHeight));
+
+            resizingElement.style.width = clampedWidth + '%';
+            resizingElement.style.height = clampedHeight + '%';
+
+            const zoneId = parseInt(resizingElement.dataset.zoneId);
+            const zone = dropZones.find(z => z.id === zoneId);
+            if (zone) {
+                zone.width = clampedWidth;
+                zone.height = clampedHeight;
+            }
+        }
+
+        function stopResize() {
+            resizingElement = null;
+            document.removeEventListener('mousemove', resizeZone);
+            document.removeEventListener('mouseup', stopResize);
+            renderGroupsList();
+        }
+
+        function updateZoneName(id, newName) {
+            const zone = dropZones.find(z => z.id === id);
+            if (zone) {
+                zone.name = newName;
+                renderAll();
+            }
+        }
+
+        function updateOptionName(id, newName) {
+            const option = options.find(o => o.id === id);
+            if (option) {
+                option.name = newName;
+                renderAll();
+            }
+        }
+
+        function deleteZone(id) {
+            dropZones = dropZones.filter(z => z.id !== id);
+            renderAll();
+        }
+
+        function deleteOption(id) {
+            options = options.filter(o => o.id !== id);
+            renderAll();
+        }
+
+        function changeOptionImage(id) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const option = options.find(o => o.id === id);
+                    if (option) {
+                        option.imagePath = event.target.result;
+                        renderAll();
+                    }
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        function closeModal() {
+            if (confirm('Are you sure you want to close? Any unsaved changes will be lost.')) {
+                window.close();
+            }
+        }
+
+        function saveQuestion() {
+            const questionName = document.querySelector('.question-input').value;
+            
+            if (!questionName.trim()) {
+                alert('Please enter a question name');
+                return;
+            }
+
+            const canvas = document.getElementById('canvas');
+            if (!canvas.querySelector('.background-image')) {
+                alert('Please upload a background image');
+                return;
+            }
+
+            if (questionGroups.length === 0) {
+                alert('Please add at least one question group');
+                return;
+            }
+
+            // Validate each question group has at least one zone and one option
+            for (let group of questionGroups) {
+                const groupZones = dropZones.filter(z => z.groupId === group.id);
+                const groupOptions = options.filter(opt => opt.groupId === group.id);
+                
+                if (groupZones.length === 0) {
+                    alert(`Question ${group.questionId} needs at least one drop zone`);
+                    return;
+                }
+                
+                if (groupOptions.length === 0) {
+                    alert(`Question ${group.questionId} needs at least one drag item`);
+                    return;
+                }
+            }
+
+            const questionData = {
+                name: questionName,
+                type: 'placing-in-picture',
+                backgroundImage: canvas.querySelector('.background-image').src,
+                questionGroups: questionGroups,
+                dropZones: dropZones,
+                options: options
+            };
+
+            console.log('Saving question:', questionData);
+            
+            let summary = `Question saved successfully!\n\n`;
+            questionGroups.forEach(group => {
+                const groupZones = dropZones.filter(z => z.groupId === group.id);
+                const groupOptions = options.filter(opt => opt.groupId === group.id);
+                summary += `${group.questionId}:\n`;
+                summary += `  Zones: ${groupZones.map(z => z.name).join(', ')}\n`;
+                summary += `  Items: ${groupOptions.map(o => o.name).join(', ')}\n\n`;
+            });
+            
+            const noiseZones = dropZones.filter(z => z.groupId === null);
+            const noiseOptions = options.filter(opt => opt.groupId === null);
+            if (noiseZones.length > 0 || noiseOptions.length > 0) {
+                summary += `Noise:\n`;
+                if (noiseZones.length > 0) summary += `  Zones: ${noiseZones.map(z => z.name).join(', ')}\n`;
+                if (noiseOptions.length > 0) summary += `  Items: ${noiseOptions.map(o => o.name).join(', ')}\n`;
+            }
+            
+            alert(summary);
+        }
+
+        // Initialize with sample data on load
+        window.addEventListener('load', initializeSampleData);
+    </script>
+</body>
+</html>
