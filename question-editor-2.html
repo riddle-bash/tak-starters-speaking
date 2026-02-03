@@ -969,7 +969,7 @@
                             <div class="group-section">
                                 <div class="section-title">Drag Items (${groupOptions.length})</div>
                                 ${groupOptions.map(opt => renderOptionItem(opt, group.id)).join('')}
-                                ${groupOptions.length === 0 ? `<div class="add-zone-btn" onclick="addDropZone(${group.id})">+</div>` : ''}
+                                ${groupOptions.length === 0 ? `<div class="add-zone-btn" onclick="addOption(${group.id})">+</div>` : ''}
                             </div>
                         </div>
                     </div>
