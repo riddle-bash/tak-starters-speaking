@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Placing in Picture - TAK12</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .instructions {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 6px;
+        }
+
+        .instructions p {
+            color: #1e40af;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .quiz-content {
+            display: flex;
+            gap: 30px;
+        }
+
+        .main-area {
+            flex: 1;
+        }
+
+        .picture-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .background-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Drop zones - preset positions on the background */
+        .drop-zone {
+            position: absolute;
+            border: 3px dashed transparent;
+            border-radius: 8px;
+            background: transparent;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.4);
+            border-style: solid;
+            transform: scale(1.05);
+        }
+
+        .drop-zone.filled {
+            border-color: transparent;
+            border-style: solid;
+            background: transparent;
+        }
+
+        .drop-zone.filled:hover {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+
+
+        .dropped-item {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 5px;
+        }
+
+        /* Specific drop zone positions - customize these based on your background image */
+        .zone1 {
+            top: 10%;
+            left: 10%;
+            width: 10%;
+            aspect-ratio: 1;
+        }
+
+        .zone2 {
+            top: 70%;
+            left: 45%;
+            width: 10%;
+            aspect-ratio: 1;
+        }
+
+        .zone3 {
+            bottom: 15%;
+            right: 18%;
+            width: 10%;
+            aspect-ratio: 1;
+        }
+
+        .zone4 {
+            bottom: 12%;
+            left: 20%;
+            width: 10%;
+            aspect-ratio: 1;
+        }
+
+        .sidebar {
+            width: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .draggable-option {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 2px solid #d1d5db;
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: grab;
+            transition: all 0.2s ease;
+            background: white;
+            padding: 5px;
+            position: relative;
+        }
+
+        .draggable-option.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .draggable-option.used {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-color: #d1d5db;
+        }
+
+        .draggable-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .draggable-option:hover:not(.used):not(.dragging) {
+            border-color: #3b82f6;
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .audio-player {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            border: none;
+            padding: 14px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn {
+            background: #6b7280;
+            color: white;
+            box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+        }
+
+        .reset-btn:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
+        }
+
+        .submit-btn {
+            background: #84cc16;
+            color: white;
+            box-shadow: 0 2px 8px rgba(132, 204, 22, 0.3);
+        }
+
+        .submit-btn:hover {
+            background: #65a30d;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(132, 204, 22, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .feedback {
+            margin-top: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            text-align: center;
+            display: none;
+        }
+
+        .feedback.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+
+        .feedback.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+        }
+
+        @media (max-width: 1024px) {
+            .quiz-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-width: 400px;
+                margin: 0 auto;
+            }
+
+            .options-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .options-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .options-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">NamTest - Starters Speaking</div>
+        </div>
+
+        <div class="instructions">
+            <p>🎯 <strong>Hướng dẫn:</strong> Kéo các hình ảnh từ bên phải và thả vào các ô trống trên hình nền. Nhấn vào ô đã điền để xóa và thử lại.</p>
+        </div>
+
+        <div class="quiz-content">
+            <div class="main-area">
+                <div class="picture-container" id="pictureContainer">
+                    <img src="https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_1.jpg" 
+                         alt="Farm Scene" 
+                         class="background-image"
+                         id="backgroundImage">
+                    
+                    <!-- Preset drop zones on the background image -->
+                    <div class="drop-zone zone1" data-zone="zone1"></div>
+                    
+                    <div class="drop-zone zone2" data-zone="zone2"></div>
+                    
+                    <div class="drop-zone zone3" data-zone="zone3"></div>
+                    
+                    <div class="drop-zone zone4" data-zone="zone4"></div>
+                </div>
+
+                <div class="controls">
+                    <audio controls class="audio-player" id="audioPlayer">
+                        <source src="https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_Item.mp3" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                    
+                    <div class="action-buttons">
+                        <button class="btn reset-btn" id="resetBtn">Làm lại</button>
+                        <button class="btn submit-btn" id="submitBtn" disabled>Nộp bài</button>
+                    </div>
+                    
+                    <div class="feedback" id="feedback"></div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="options-grid" id="optionsGrid">
+                    <div class="draggable-option" draggable="true" data-option="item1">
+                        <img src="https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_Item%20(1).png" alt="Item 1">
+                    </div>
+                    <div class="draggable-option" draggable="true" data-option="item2">
+                        <img src="https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_Item%20(2).png" alt="Item 2">
+                    </div>
+                    <div class="draggable-option" draggable="true" data-option="item3">
+                        <img src="https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_Item%20(3).png" alt="Item 3">
+                    </div>
+                    <div class="draggable-option" draggable="true" data-option="item4">
+                        <img src="https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_Item%20(4).png" alt="Item 4">
+                    </div>
+                    <div class="draggable-option" draggable="true" data-option="item5">
+                        <img src="https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_Item%20(5).png" alt="Item 5">
+                    </div>
+                    <div class="draggable-option" draggable="true" data-option="item6">
+                        <img src="https://quiz.tak12.com/Upload/Quiz/Question%20Bank/Starters_Speaking_Item%20(7).png" alt="Item 6">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let placements = {}; // { zone1: 'sheep', zone2: 'car', ... }
+        let usedOptions = new Set(); // Set of used option IDs
+
+        // Correct answer (for demonstration - in real app this would come from backend)
+        const correctAnswer = {
+            zone1: 'item1',
+            zone2: 'item2',
+            zone3: 'item3',
+            zone4: 'item4'
+        };
+
+        // Get DOM elements
+        const draggableOptions = document.querySelectorAll('.draggable-option');
+        const dropZones = document.querySelectorAll('.drop-zone');
+        const submitBtn = document.getElementById('submitBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const feedback = document.getElementById('feedback');
+
+        // Drag start event
+        draggableOptions.forEach(option => {
+            option.addEventListener('dragstart', function(e) {
+                if (this.classList.contains('used')) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', this.dataset.option);
+            });
+
+            option.addEventListener('dragend', function() {
+                this.classList.remove('dragging');
+            });
+        });
+
+        // Drop zone events
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                if (!this.classList.contains('filled')) {
+                    this.classList.add('drag-over');
+                }
+            });
+
+            zone.addEventListener('dragleave', function() {
+                this.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                
+                const optionId = e.dataTransfer.getData('text/plain');
+                const zoneId = this.dataset.zone;
+                
+                // If zone already filled, don't allow drop
+                if (placements[zoneId]) {
+                    return;
+                }
+                
+                // Place the item
+                placeItem(zoneId, optionId);
+            });
+
+            // Click on filled zone to remove
+            zone.addEventListener('click', function() {
+                if (this.classList.contains('filled')) {
+                    const zoneId = this.dataset.zone;
+                    removeItem(zoneId);
+                }
+            });
+        });
+
+        // Place item in zone
+        function placeItem(zoneId, optionId) {
+            const zone = document.querySelector(`.drop-zone[data-zone="${zoneId}"]`);
+            const option = document.querySelector(`.draggable-option[data-option="${optionId}"]`);
+            
+            if (!zone || !option) return;
+            
+            // Get the image source
+            const imgSrc = option.querySelector('img').src;
+            
+            // Create dropped item
+            const droppedImg = document.createElement('img');
+            droppedImg.src = imgSrc;
+            droppedImg.className = 'dropped-item';
+            droppedImg.alt = optionId;
+            
+            // Add to zone
+            zone.appendChild(droppedImg);
+            zone.classList.add('filled');
+            
+            // Mark option as used
+            option.classList.add('used');
+            option.draggable = false;
+            
+            // Update state
+            placements[zoneId] = optionId;
+            usedOptions.add(optionId);
+            
+            // Update submit button
+            updateSubmitButton();
+        }
+
+        // Remove item from zone
+        function removeItem(zoneId) {
+            const zone = document.querySelector(`.drop-zone[data-zone="${zoneId}"]`);
+            const optionId = placements[zoneId];
+            
+            if (!zone || !optionId) return;
+            
+            // Remove dropped image
+            const droppedImg = zone.querySelector('.dropped-item');
+            if (droppedImg) {
+                droppedImg.remove();
+            }
+            
+            zone.classList.remove('filled');
+            
+            // Mark option as available again
+            const option = document.querySelector(`.draggable-option[data-option="${optionId}"]`);
+            if (option) {
+                option.classList.remove('used');
+                option.draggable = true;
+            }
+            
+            // Update state
+            delete placements[zoneId];
+            usedOptions.delete(optionId);
+            
+            // Update submit button
+            updateSubmitButton();
+        }
+
+        // Update submit button state
+        function updateSubmitButton() {
+            const hasAtLeastOne = Object.keys(placements).length >= 1;
+            submitBtn.disabled = !hasAtLeastOne;
+        }
+
+        // Reset button
+        resetBtn.addEventListener('click', function() {
+            // Remove all placements
+            Object.keys(placements).forEach(zoneId => {
+                removeItem(zoneId);
+            });
+            
+            // Hide feedback
+            feedback.style.display = 'none';
+            feedback.className = 'feedback';
+        });
+
+        // Submit button
+        submitBtn.addEventListener('click', function() {
+            // Check if item6 is in zone3 (correct answer)
+            const isCorrect = placements['zone3'] === 'item6';
+            
+            // Show feedback
+            feedback.style.display = 'block';
+            feedback.style.position = 'sticky';
+            feedback.style.bottom = '10px';
+            
+            if (isCorrect) {
+                feedback.className = 'feedback success';
+                feedback.textContent = `🎉 Chính xác! Bạn đã đặt đúng hình ảnh!`;
+            } else {
+                feedback.className = 'feedback error';
+                feedback.textContent = `❌ Chưa chính xác. Hãy thử lại!`;
+            }
+            
+            // Log for debugging
+            console.log('Your answer:', placements);
+            console.log('Is correct:', isCorrect);
+        });
+
+        // Optional: Auto-play audio when page loads
+        // Uncomment the next line if you want auto-play
+        // document.getElementById('audioPlayer').play();
+    </script>
+</body>
+</html>
