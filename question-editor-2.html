@@ -441,7 +441,8 @@
             font-size: 12px;
             font-weight: 500;
             transition: background 0.2s;
-            width: 100%;
+            width: fit-content;
+            margin: 15px auto 5px auto;
         }
 
         .add-zone-btn:hover, .add-item-btn:hover {
@@ -963,10 +964,12 @@
                             <div class="group-section">
                                 <div class="section-title">Drop Zones (${groupZones.length})</div>
                                 ${groupZones.map(zone => renderZoneItem(zone, group.id)).join('')}
+                                ${groupZones.length === 0 ? `<div class="add-zone-btn" onclick="addDropZone(${group.id})">+</div>` : ''}
                             </div>
                             <div class="group-section">
                                 <div class="section-title">Drag Items (${groupOptions.length})</div>
                                 ${groupOptions.map(opt => renderOptionItem(opt, group.id)).join('')}
+                                ${groupOptions.length === 0 ? `<div class="add-zone-btn" onclick="addDropZone(${group.id})">+</div>` : ''}
                             </div>
                         </div>
                     </div>
